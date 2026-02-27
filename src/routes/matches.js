@@ -23,7 +23,7 @@ matchRouter.get("/", async(req, res) => {
             .select()
             .from(matches)
             .orderBy((desc(matches.createdAt)))
-            .limit(limit)
+            .limit(limit);
 
         res.json({ data });
     } catch (e) {
@@ -33,8 +33,13 @@ matchRouter.get("/", async(req, res) => {
 
 matchRouter.post("/", async (req, res) => {
     const parsed = createMatchSchema.safeParse(req.body);
+    const status = getMatchStatus(startTime, endTime);
+    if (!status) {
+        return res.status(400).json({ error: "Unable to determine match status from provided times." });
+    }
+    
     const { data: { startTime, endTime, homeScore, awayScore }} = parsed;
-
+    
     if(!parsed.success) {
         return res.status(400).json({ error: "Invalid payload", details: JSON.stringify(parsed.error) });
     }
@@ -46,7 +51,7 @@ matchRouter.post("/", async (req, res) => {
             endTime: new Date(endTime),
             homeScore: homeScore ?? 0,
             awayScore: awayScore ?? 0,
-            status: getMatchStatus(startTime, endTime),
+            status,
         }).returning();
 
         res.status(201).json({ data: event });
